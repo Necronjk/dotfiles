@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE="/home/necron/Documents/work"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/work"
+PANE_FILE="$STATE_DIR/panes"
+mkdir -p "$STATE_DIR"
+
+# SSO is always launched first; every other project depends on it.
+PROJECTS=(sso saypay referral fininfo cpro)
+declare -A DIRS=(
+    [sso]=saypay-sso
+    [saypay]=saypay-clientapp
+    [referral]=referral-app
+    [fininfo]=fininfo
+    [cpro]=okb-cpro-service
+)
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+# --------------------------------------------------
+# Docker
+# --------------------------------------------------
+
+ensure_docker() {
+    echo "Checking Docker..."
+    systemctl is-active --quiet docker || sudo systemctl start docker
+    docker info >/dev/null 2>&1 || die "Docker daemon is unavailable"
+
+    local c running
+    for c in postgres mysql; do
+        running=$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null) \
+            || die "Container '$c' does not exist"
+        if [[ $running == true ]]; then
+            echo "$c is already running"
+        else
+            echo "Starting $c..."
+            docker start "$c" >/dev/null
+        fi
+    done
+}
+
+# --------------------------------------------------
+# WezTerm
+# --------------------------------------------------
+
+# open_pane <wezterm cli subcommand + args>  -> prints pane id
+open_pane() {
+    local pane
+    pane=$(wezterm cli "$@" -- env WORKSPACE_NO_HISTORY=1 zsh -l)
+    echo "$pane" >> "$PANE_FILE"
+    echo "$pane"
+}
+
+new_tab()      { open_pane spawn --cwd "$1"; }
+split_pane()   { open_pane split-pane --pane-id "$1" "--$2" --cwd "$3"; }
+set_tab_name() { wezterm cli set-tab-title --pane-id "$1" "$2"; }
+
+# run_in_pane <pane> <cwd> <command>
+run_in_pane() {
+    wezterm cli send-text --pane-id "$1" --no-paste "cd '$2' && clear && $3"$'\n'
+}
+
+# --------------------------------------------------
+# Projects
+# --------------------------------------------------
+
+launch_fininfo() {
+    local root="$BASE/${DIRS[fininfo]}" api client server
+    api=$(new_tab "$root/api/dist")
+    set_tab_name "$api" FININFO
+    client=$(split_pane "$api" bottom "$root/web_client")
+    server=$(split_pane "$client" right "$root/web_server/dist")
+
+    run_in_pane "$api"    "$root/api/dist"        "npm run watch"
+    run_in_pane "$client" "$root/web_client"      "npm run watch -- --env OUTPUT_PATH=../web_server/dist/static/ui"
+    run_in_pane "$server" "$root/web_server/dist" "npm run watch"
+}
+
+# launch_laravel <project> <tab title>
+launch_laravel() {
+    local root="$BASE/${DIRS[$1]}" backend frontend
+    backend=$(new_tab "$root")
+    set_tab_name "$backend" "$2"
+    frontend=$(split_pane "$backend" bottom "$root")
+
+    run_in_pane "$backend"  "$root" "php artisan serve"
+    run_in_pane "$frontend" "$root" "npm run dev"
+}
+
+# launch_single <project> <tab title> <command>
+launch_single() {
+    local root="$BASE/${DIRS[$1]}" pane
+    pane=$(new_tab "$root")
+    set_tab_name "$pane" "$2"
+    run_in_pane "$pane" "$root" "$3"
+}
+
+launch() {
+    echo "Launching $1..."
+    case "$1" in
+        sso)      launch_laravel sso SSO ;;
+        saypay)   launch_laravel saypay SAYPAY ;;
+        referral) launch_single referral REFERRAL \
+                      'APP_VERSION=$(cat VERSION) docker compose -p referral-app --env-file=.env up --build' ;;
+        fininfo)  launch_fininfo ;;
+        cpro)     launch_single cpro CPRO 'docker compose -p cpro up --build' ;;
+    esac
+}
+
+# --------------------------------------------------
+# Stop
+# --------------------------------------------------
+
+stop_all() {
+    echo "Stopping managed development environment..."
+
+    if [[ -f $PANE_FILE ]]; then
+        local panes pane
+        # Only panes that still exist.
+        mapfile -t panes < <(
+            wezterm cli list --format json | jq -r '.[].pane_id' | grep -Fxf "$PANE_FILE" || true
+        )
+
+        for pane in "${panes[@]}"; do
+            echo "Sending Ctrl+C to pane $pane"
+            wezterm cli send-text --pane-id "$pane" --no-paste $'\x03' || true
+        done
+        if (( ${#panes[@]} )); then sleep 2; fi
+        for pane in "${panes[@]}"; do
+            wezterm cli kill-pane --pane-id "$pane" || true
+        done
+
+        rm -f "$PANE_FILE"
+    fi
+
+    # Stop (not remove) containers.
+    echo "Stopping Referral containers..."
+    (cd "$BASE/referral-app" && docker compose -p referral-app --env-file=.env stop) \
+        || echo "Warning: Referral shutdown failed"
+
+    echo "Stopping CPRO containers..."
+    (cd "$BASE/okb-cpro-service" && docker compose -p cpro stop) \
+        || echo "Warning: CPRO shutdown failed"
+
+    echo "Development environment stopped."
+}
+
+# --------------------------------------------------
+# Main
+# --------------------------------------------------
+
+usage() {
+    local IFS='|'
+    echo "Usage: work {${PROJECTS[*]}|all|stop|list}"
+}
+
+case "${1:-}" in
+    stop) stop_all; exit 0 ;;
+    list) printf '%s\n' "${PROJECTS[@]}"; exit 0 ;;
+    all)  targets=("${PROJECTS[@]}") ;;
+    sso)  targets=(sso) ;;
+    fininfo|saypay|referral|cpro) targets=(sso "$1") ;;   # SSO is a dependency
+    *)    usage; exit 1 ;;
+esac
+
+# Skip anything already running, so nothing is duplicated.
+to_launch=()
+for t in "${targets[@]}"; do
+    if [[ -n $(live_panes "$t") ]]; then
+        echo "$t is already running, skipping"
+    else
+        to_launch+=("$t")
+    fi
+done
+
+if (( ${#to_launch[@]} == 0 )); then
+    echo "Everything is already running."
+    exit 0
+fi
+
+for t in "${to_launch[@]}"; do
+    [[ -d $BASE/${DIRS[$t]} ]] || die "Missing project directory: $BASE/${DIRS[$t]}"
+done
+
+ensure_docker
+
+for t in "${to_launch[@]}"; do
+    launch "$t"
+done
+
+echo "Workspace launch completed."

@@ -1,0 +1,221 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "git": {
+    "auto_fetch": {
+      "interval_secs": 180,
+      "enabled": true
+    }
+  },
+  "indent_guides": {
+    "active_line_width": 2,
+    "line_width": 1,
+    "background_coloring": "indent_aware",
+    "coloring": "indent_aware"
+  },
+  "proxy": "socks5://localhost:10808",
+  "edit_predictions": {
+    "copilot": {
+      "prediction_debounce": 50
+    },
+    "zed": {
+      "prediction_debounce": 0
+    }
+  },
+  "title_bar": {
+    "show_menus": false,
+    "show_branch_status_icon": true
+  },
+  "completions": {
+    "lsp_insert_mode": "replace_suffix",
+    "lsp": true
+  },
+  "languages": {
+    "HTML": {
+      "inlay_hints": {
+        "enabled": false
+      }
+    }
+  },
+  "prettier": {
+    "parser": "",
+    "allowed": true
+  },
+  "document_folding_ranges": "on",
+  "cli_default_open_behavior": "new_window",
+  "use_on_type_format": false,
+  "language_models": {
+    "opencode": {
+      "show_go_models": true,
+      "show_zen_models": true
+    },
+    "openai_compatible": {
+      "local": {
+        "api_url": "http://192.168.1.130:5001/v1",
+        "available_models": [
+          {
+            "name": "koboldcpp/gemma-4-12b-it-qat-q4_0",
+            "display_name": "Gemma 4 12B Q4_0 (KoboldCpp)",
+            "max_tokens": 32768,
+            "max_output_tokens": 8192,
+            "capabilities": {
+              "tools": true,
+              "images": false,
+              "parallel_tool_calls": false,
+              "prompt_cache_key": false,
+              "chat_completions": true,
+              "interleaved_reasoning": false,
+              "max_tokens_parameter": false
+            }
+          }
+        ]
+      }
+    },
+    "llama.cpp": {
+      "api_url": "http://localhost:8080"
+    }
+  },
+  "git_panel": {
+    "dock": "left",
+    "group_by": "staging",
+    "tree_view": true
+  },
+  "buffer_font_weight": 400.0,
+  "terminal": {
+    "font_weight": 400.0,
+    "font_size": 15.0,
+    "font_family": "CaskaydiaCove Nerd Font"
+  },
+  "agent": {
+    "sandbox_permissions": {
+      "allow_unsandboxed": true
+    },
+    "default_profile": "ask",
+    "threads_sidebar": {
+      "position": "right"
+    },
+    "tool_permissions": {
+      "tools": {
+        "create_directory": {
+          "always_allow": [
+            {
+              "pattern": "^dfstrats/"
+            }
+          ]
+        },
+        "delete_path": {
+          "always_allow": [
+            {
+              "pattern": "^dfstrats/"
+            }
+          ]
+        },
+        "skill": {
+          "default": "allow"
+        },
+        "terminal": {
+          "default": "allow",
+          "always_allow": [
+            {
+              "pattern": "^git\\b"
+            },
+            {
+              "pattern": "^cat\\b"
+            },
+            {
+              "pattern": "^head\\b"
+            },
+            {
+              "pattern": "^echo\\b"
+            }
+          ]
+        }
+      }
+    },
+    "default_model": {
+      "effort": "high",
+      "provider": "opencode",
+      "model": "zen/claude-opus-5-5",
+      "enable_thinking": true
+    },
+    "dock": "right",
+    "favorite_models": [
+      {
+        "provider": "opencode",
+        "model": "go/mimo-v2.6-pro",
+        "enable_thinking": true
+      },
+      {
+        "provider": "opencode",
+        "model": "go/deepseek-v4.1-flash",
+        "enable_thinking": true,
+        "effort": "max"
+      },
+      {
+        "provider": "opencode",
+        "model": "zen/claude-opus-5-5",
+        "enable_thinking": true,
+        "effort": "high"
+      },
+      {
+        "provider": "opencode",
+        "model": "zen/gpt-6-astra",
+        "enable_thinking": true,
+        "effort": "high"
+      },
+      {
+        "provider": "opencode",
+        "model": "go/claude-haiku-5-5",
+        "enable_thinking": true,
+        "effort": "max"
+      }
+    ],
+    "model_parameters": []
+  },
+  "which_key": {
+    "enabled": true
+  },
+  "agent_ui_font_size": 17.0,
+  "ui_font_weight": 400.0,
+  "redact_private_values": false,
+  "project_panel": {
+    "dock": "left",
+    "auto_fold_dirs": false
+  },
+  "minimap": {
+    "show": "always"
+  },
+  "autosave": {
+    "after_delay": {
+      "milliseconds": 250
+    }
+  },
+  "buffer_font_fallbacks": [
+    "CaskaydiaCove Nerd Font"
+  ],
+  "buffer_font_family": "Droid Sans Mono",
+  "file_types": {
+    "plaintext": [
+      ".env*"
+    ]
+  },
+  "icon_theme": {
+    "mode": "light",
+    "light": "Zed (Default)",
+    "dark": "Zed (Default)"
+  },
+  "base_keymap": "VSCode",
+  "ui_font_size": 17.0,
+  "buffer_font_size": 15.0,
+  "theme": {
+    "mode": "dark",
+    "light": "One Light",
+    "dark": "Adaptify Darker (Blurred)",
+  },
+}
