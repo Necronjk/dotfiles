@@ -66,7 +66,7 @@ local function get_tab_title(tab)
             )
 
             if parent ~= "" then
-                return parent .. " / " .. current
+                return parent .. "/" .. current
             end
 
             return current
@@ -158,6 +158,16 @@ local config = {
       key = "-",
       mods = "CMD",
       action = act.SplitVertical { domain = "CurrentPaneDomain" },
+    },
+    {
+      key = "t",
+      mods = "CTRL|SHIFT",
+      action = act.SpawnCommandInNewTab { cwd = wezterm.home_dir, },
+    },
+    {
+      key = "y",
+      mods = "CTRL|SHIFT",
+      action = act.SpawnTab 'CurrentPaneDomain',
     },
     {
       key = "LeftArrow",
